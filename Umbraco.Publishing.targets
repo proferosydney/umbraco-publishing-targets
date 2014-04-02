@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2014 Lowe Profero Sydney
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <SetUmbracoAcls Condition="'$(SetUmbracoAcls)' == ''">true</SetUmbracoAcls>
+    <CreateUmbracoAclParameters Condition="'$(CreateUmbracoAclParameters)' == ''">$(SetUmbracoAcls)</CreateUmbracoAclParameters>
+    <CreateMissingUmbracoDirectories Condition="'$(CreateMissingUmbracoDirectories)' == ''">true</CreateMissingUmbracoDirectories>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <_UmbracoRequiredFolders>
+      <AclAccess>Write</AclAccess>
+    </_UmbracoRequiredFolders>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <_UmbracoRequiredFolders Include="App_Code" />
+    <_UmbracoRequiredFolders Include="App_Data" />
+    <_UmbracoRequiredFolders Include="config" />
+    <_UmbracoRequiredFolders Include="MacroScripts" />
+    <_UmbracoRequiredFolders Include="Masterpages" />
+    <_UmbracoRequiredFolders Include="Media" />
+    <_UmbracoRequiredFolders Include="Scripts" />
+    <_UmbracoRequiredFolders Include="UserControls" />
+    <_UmbracoRequiredFolders Include="Xslt" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <AfterAddContentPathToSourceManifest Condition="$(CreateMissingUmbracoDirectories)">
+      $(AfterAddContentPathToSourceManifest);
+      _UmbracoCreateEmptyFolders
+    </AfterAddContentPathToSourceManifest>
+  </PropertyGroup>
+
+  <Target Name="_UmbracoCreateEmptyFolders">
+    <MakeDir Directories="@(_UmbracoRequiredFolders -> '$(_MSDeployDirPath_FullPath)\%(Identity)')" />
+  </Target>
+
+  <PropertyGroup>
+    <AfterAddIisSettingAndFileContentsToSourceManifest Condition="$(SetUmbracoAcls)">
+      $(AfterAddIisSettingAndFileContentsToSourceManifest);
+      _UmbracoAddAdditionalAclsToSourceManifest;
+    </AfterAddIisSettingAndFileContentsToSourceManifest>
+    <AfterAddIisAndContentDeclareParametersItems Condition="$(CreateUmbracoAclParameters)">
+      $(AfterAddIisAndContentDeclareParametersItems);
+      _UmbracoAddAdditionalAclsDeclareParameterItems
+    </AfterAddIisAndContentDeclareParametersItems>
+  </PropertyGroup>
+
+  <Target Name="_UmbracoAddAdditionalAclsToSourceManifest">
+    <ItemGroup Condition="'@(_UmbracoRequiredFolders)' != ''">
+      <MsDeploySourceManifest Include="setAcl">
+        <Path>$(_MSDeployDirPath_FullPath)\%(_UmbracoRequiredFolders.Identity)</Path>
+        <setAclAccess>%(_UmbracoRequiredFolders.AclAccess)</setAclAccess>
+        <AdditionalProviderSettings>setAclAccess</AdditionalProviderSettings>
+      </MsDeploySourceManifest>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_UmbracoAddAdditionalAclsDeclareParameterItems">
+    <ItemGroup Condition="'@(_UmbracoRequiredFolders)' != ''">
+      <MsDeployDeclareParameters Include="Add %(_UmbracoRequiredFolders.AclAccess) permission to %(_UmbracoRequiredFolders.Identity) Folder">
+        <Kind>ProviderPath</Kind>
+        <Scope>setAcl</Scope>
+        <Match>^$(_EscapeRegEx_MSDeployDirPath)\\@(AdditionalAcls)$</Match>
+        <Description>Add %(_UmbracoRequiredFolders.AclAccess) permission to %(_UmbracoRequiredFolders.Identity) Folder</Description>
+        <DefaultValue>{$(_MsDeployParameterNameForContentPath)}/@(_UmbracoRequiredFolders)</DefaultValue>
+        <DestinationContentPath>$(_DestinationContentPath)/@(_UmbracoRequiredFolders)</DestinationContentPath>
+        <Tags>Hidden</Tags>
+        <ExcludeFromSetParameter>True</ExcludeFromSetParameter>
+        <Priority>$(VsSetAclPriority)</Priority>
+      </MsDeployDeclareParameters>
+    </ItemGroup>
+  </Target>
+  
+</Project>
